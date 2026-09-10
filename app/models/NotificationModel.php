@@ -13,10 +13,10 @@ class NotificationModel {
     }
 
     public function create(int $userId, string $type, string $title, string $message, ?int $relatedId = null): int {
-        $stmt = $this->pdo->prepare(
-            'INSERT INTO notifications (user_id, type, title, message, related_id, is_read)
-             VALUES (?, ?, ?, ?, ?, 0)'
-        );
+        $stmt = $this->pdo->prepare('
+            INSERT INTO notifications (user_id, type, title, message, related_id, is_read)
+            VALUES (?, ?, ?, ?, ?, 0)
+        ');
         $stmt->execute([$userId, $type, $title, $message, $relatedId]);
         return (int)$this->pdo->lastInsertId();
     }
@@ -28,9 +28,12 @@ class NotificationModel {
     }
 
     public function getRecent(int $userId, int $limit = 20): array {
-        $stmt = $this->pdo->prepare(
-            'SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ?'
-        );
+        $stmt = $this->pdo->prepare('
+            SELECT * FROM notifications 
+            WHERE user_id = ? 
+            ORDER BY created_at DESC 
+            LIMIT ?
+        ');
         $stmt->execute([$userId, $limit]);
         return $stmt->fetchAll();
     }

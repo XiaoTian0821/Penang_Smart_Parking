@@ -5,9 +5,13 @@
 
 namespace App\Controllers;
 
-use App\Services\CameraService;
+use App\Models\AiDetectionModel;
+use App\Models\ParkingSessionModel;
+use App\Models\VehicleModel;
+use App\Models\ZoneModel;
 use App\Services\EnforcementService;
 use App\Services\CompoundService;
+use \CameraService;
 
 class OfficerController {
     private $enforcementService;
@@ -27,16 +31,16 @@ class OfficerController {
         $this->enforcementService = new EnforcementService();
         $this->compoundService = new CompoundService();
         $this->cameraService = new CameraService();
-        $this->vehicleModel = new \App\Models\VehicleModel();
-        $this->sessionModel = new \App\Models\ParkingSessionModel();
-        $this->zoneModel = new \App\Models\ZoneModel();
+        $this->vehicleModel = new VehicleModel();
+        $this->sessionModel = new ParkingSessionModel();
+        $this->zoneModel = new ZoneModel();
     }
 
     public function index() {
         $user = currentUser();
         $pendingCompounds = $this->compoundService->getPendingReview();
         $zones = $this->zoneModel->getActive();
-        $todayDetections = (new \App\Models\AiDetectionModel())->getRecent(20);
+        $todayDetections = (new AiDetectionModel())->getRecent(20);
 
         render('officer/dashboard', [
             'pendingCompounds' => $pendingCompounds,
@@ -61,11 +65,10 @@ class OfficerController {
     }
 
     public function evidence() {
-        // List evidence files
         $evidenceDir = EVIDENCE_PATH;
         $files = [];
         if (is_dir($evidenceDir)) {
-            $iterator = new \DirectoryIterator($evidenceDir);
+            $iterator = new DirectoryIterator($evidenceDir);
             foreach ($iterator as $file) {
                 if ($file->isFile() && !$file->isDot()) {
                     $files[] = [

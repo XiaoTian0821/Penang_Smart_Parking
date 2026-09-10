@@ -18,24 +18,25 @@ class VehicleModel {
         return $stmt->fetch() ?: null;
     }
 
-    public function findByPlate(string $normalizedPlate): ?array {
-        $stmt = $this->pdo->prepare('SELECT * FROM vehicles WHERE normalized_plate = ?');
-        $stmt->execute([strtoupper($normalizedPlate)]);
+    public function findByPlate(string $plate): ?array {
+        $normalized = normalizePlate($plate);
+        $stmt = $this->pdo->prepare('SELECT * FROM vehicles WHERE normalized_plate = ? AND status = ?');
+        $stmt->execute([$normalized, 'active']);
         return $stmt->fetch() ?: null;
     }
 
     public function findByOwner(int $ownerId): array {
-        $stmt = $this->pdo->prepare("SELECT * FROM vehicles WHERE owner_id = ? AND status = 'active' ORDER BY created_at DESC");
+        $stmt = $this->pdo->prepare('SELECT * FROM vehicles WHERE owner_id = ? ORDER BY created_at DESC');
         $stmt->execute([$ownerId]);
         return $stmt->fetchAll();
     }
 
     public function create(array $data): int {
-        $normalized = strtoupper(preg_replace('/[\s\-]+/', '', $data['plate']));
-        $stmt = $this->pdo->prepare(
-            'INSERT INTO vehicles (owner_id, plate, normalized_plate, vehicle_type, color, make, model, year, status)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        );
+        $normalized = normalizePlate($data['plate']);
+        $stmt = $this->pdo->prepare('
+            INSERT INTO vehicles (owner_id, plate, normalized_plate, vehicle_type, color, make, model, year, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ');
         $stmt->execute([
             $data['owner_id'],
             $data['plate'],
@@ -45,44 +46,37 @@ class VehicleModel {
             $data['make'] ?? null,
             $data['model'] ?? null,
             $data['year'] ?? null,
-            'active'
+            'active',
         ]);
         return (int)$this->pdo->lastInsertId();
     }
 
-    public function update(int $id, int $ownerId, array $data): bool {
-        // Verify ownership
-        $stmt = $this->pdo->prepare('SELECT id FROM vehicles WHERE id = ? AND owner_id = ?');
-        $stmt->execute([$id, $ownerId]);
-        if (!$stmt->fetch()) {
-            return false;
+    public function update(int $id, array $data): bool {
+        $fields = [];
+        $values = [];
+        foreach ($data as $key => $value) {
+            if ($key !== 'id') {
+                $fields[] = "$key = ?";
+                $values[] = $value;
+            }
         }
-
-        $stmt = $this->pdo->prepare(
-            'UPDATE vehicles SET plate = ?, vehicle_type = ?, color = ?, make = ?, model = ?, year = ? WHERE id = ?'
-        );
-        return $stmt->execute([
-            $data['plate'],
-            $data['vehicle_type'] ?? 'car',
-            $data['color'] ?? null,
-            $data['make'] ?? null,
-            $data['model'] ?? null,
-            $data['year'] ?? null,
-            $id
-        ]);
+        $values[] = $id;
+        $stmt = $this->pdo->prepare('UPDATE vehicles SET ' . implode(', ', $fields) . ' WHERE id = ?');
+        return $stmt->execute($values);
     }
 
-    public function delete(int $id, int $ownerId): bool {
-        $stmt = $this->pdo->prepare("UPDATE vehicles SET status = 'inactive' WHERE id = ? AND owner_id = ?");
-        return $stmt->execute([$id, $ownerId]);
+    public function delete(int $id): bool {
+        $stmt = $this->pdo->prepare('UPDATE vehicles SET status = ? WHERE id = ?');
+        return $stmt->execute(['inactive', $id]);
     }
 
-    public function search(string $query, int $limit = 20): array {
-        $stmt = $this->pdo->prepare(
-            'SELECT * FROM vehicles WHERE normalized_plate LIKE ? OR plate LIKE ? LIMIT ?'
-        );
-        $like = '%' . strtoupper($query) . '%';
-        $stmt->execute([$like, $like, $limit]);
+    public function search(string $query): array {
+        $stmt = $this->pdo->prepare("
+            SELECT * FROM vehicles 
+            WHERE plate LIKE ? OR normalized_plate LIKE ? 
+            ORDER BY created_at DESC LIMIT 50
+        ");
+        $stmt->execute(["%$query%", "%$query%"]);
         return $stmt->fetchAll();
     }
 }

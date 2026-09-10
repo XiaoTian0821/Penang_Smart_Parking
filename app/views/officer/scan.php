@@ -165,13 +165,14 @@ async function processDetection(imageData) {
         displayResult(result);
     } catch (err) {
         document.getElementById('plateNumber').textContent = 'Error';
-        document.getElementById('parkingStatus').innerHTML = '<span class="text-danger">Detection Failed</span>';
+        document.getElementById('parkingStatus').innerHTML = `<span class="text-danger">Detection Failed: ${err.message}</span>`;
     }
 }
 
 function displayResult(result) {
     if (!result.success) {
         document.getElementById('plateNumber').textContent = 'Error';
+        document.getElementById('parkingStatus').innerHTML = `<span class="text-danger">${result.message || result.error || 'Detection failed'}</span>`;
         return;
     }
 

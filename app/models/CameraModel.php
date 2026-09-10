@@ -5,8 +5,6 @@
 
 namespace App\Models;
 
-use App\Services\CameraService;
-
 class CameraModel {
     private $pdo;
 
@@ -26,10 +24,10 @@ class CameraModel {
     }
 
     public function create(array $data): int {
-        $stmt = $this->pdo->prepare(
-            'INSERT INTO cameras (name, code, camera_type, zone_id, latitude, longitude, status)
-             VALUES (?, ?, ?, ?, ?, ?, ?)'
-        );
+        $stmt = $this->pdo->prepare('
+            INSERT INTO cameras (name, code, camera_type, zone_id, latitude, longitude, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ');
         $stmt->execute([
             $data['name'],
             $data['code'],
@@ -37,7 +35,7 @@ class CameraModel {
             $data['zone_id'] ?? null,
             $data['latitude'] ?? null,
             $data['longitude'] ?? null,
-            $data['status'] ?? 'active'
+            $data['status'] ?? 'active',
         ]);
         return (int)$this->pdo->lastInsertId();
     }
@@ -52,7 +50,7 @@ class CameraModel {
             }
         }
         $values[] = $id;
-        $stmt = $this->pdo->prepare("UPDATE cameras SET " . implode(', ', $fields) . " WHERE id = ?");
+        $stmt = $this->pdo->prepare('UPDATE cameras SET ' . implode(', ', $fields) . ' WHERE id = ?');
         return $stmt->execute($values);
     }
 }

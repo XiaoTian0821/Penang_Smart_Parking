@@ -1,6 +1,6 @@
 <?php
 /**
- * Parking Zone Model
+ * Zone Model
  */
 
 namespace App\Models;
@@ -20,7 +20,7 @@ class ZoneModel {
 
     public function findByCode(string $code): ?array {
         $stmt = $this->pdo->prepare('SELECT * FROM parking_zones WHERE code = ?');
-        $stmt->execute([strtoupper($code)]);
+        $stmt->execute([$code]);
         return $stmt->fetch() ?: null;
     }
 
@@ -30,29 +30,30 @@ class ZoneModel {
     }
 
     public function getActive(): array {
-        $stmt = $this->pdo->query("SELECT * FROM parking_zones WHERE status = 'active' ORDER BY name");
+        $stmt = $this->pdo->prepare('SELECT * FROM parking_zones WHERE status = ? ORDER BY name');
+        $stmt->execute(['active']);
         return $stmt->fetchAll();
     }
 
     public function create(array $data): int {
-        $stmt = $this->pdo->prepare(
-            'INSERT INTO parking_zones (name, code, address, latitude, longitude, hourly_rate, max_duration, capacity, status, operating_hours, weekend_rules, holiday_rules, enforce_outside_hours)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        );
+        $stmt = $this->pdo->prepare('
+            INSERT INTO parking_zones (name, code, address, latitude, longitude, hourly_rate, max_duration, capacity, available_spaces, operating_hours, enforce_outside_hours, status, qr_token)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ');
         $stmt->execute([
             $data['name'],
-            strtoupper($data['code']),
+            $data['code'],
             $data['address'] ?? null,
             $data['latitude'] ?? null,
             $data['longitude'] ?? null,
             $data['hourly_rate'] ?? 1.00,
-            $data['max_duration'] ?? 240,
+            $data['max_duration'] ?? 120,
             $data['capacity'] ?? 100,
+            $data['available_spaces'] ?? $data['capacity'] ?? 100,
+            $data['operating_hours'] ?? json_encode([]),
+            $data['enforce_outside_hours'] ?? 0,
             $data['status'] ?? 'active',
-            $data['operating_hours'] ?? json_encode(['monday' => ['start' => '07:00', 'end' => '22:00'], 'tuesday' => ['start' => '07:00', 'end' => '22:00'], 'wednesday' => ['start' => '07:00', 'end' => '22:00'], 'thursday' => ['start' => '07:00', 'end' => '22:00'], 'friday' => ['start' => '07:00', 'end' => '22:00'], 'saturday' => ['start' => '08:00', 'end' => '20:00'], 'sunday' => ['start' => '08:00', 'end' => '20:00']]),
-            $data['weekend_rules'] ?? json_encode([]),
-            $data['holiday_rules'] ?? json_encode([]),
-            $data['enforce_outside_hours'] ?? 0
+            $data['qr_token'] ?? null,
         ]);
         return (int)$this->pdo->lastInsertId();
     }
@@ -61,18 +62,18 @@ class ZoneModel {
         $fields = [];
         $values = [];
         foreach ($data as $key => $value) {
-            if (!in_array($key, ['id', 'created_at'])) {
+            if ($key !== 'id') {
                 $fields[] = "$key = ?";
-                $values[] = is_array($value) ? json_encode($value) : $value;
+                $values[] = $value;
             }
         }
         $values[] = $id;
-        $stmt = $this->pdo->prepare("UPDATE parking_zones SET " . implode(', ', $fields) . " WHERE id = ?");
+        $stmt = $this->pdo->prepare('UPDATE parking_zones SET ' . implode(', ', $fields) . ' WHERE id = ?');
         return $stmt->execute($values);
     }
 
-    public function updateAvailableSpaces(int $id, int $available): bool {
+    public function updateAvailableSpaces(int $zoneId, int $available): bool {
         $stmt = $this->pdo->prepare('UPDATE parking_zones SET available_spaces = ? WHERE id = ?');
-        return $stmt->execute([$available, $id]);
+        return $stmt->execute([$available, $zoneId]);
     }
 }

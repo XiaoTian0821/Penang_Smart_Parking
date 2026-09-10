@@ -5,8 +5,6 @@
  */
 declare(strict_types=1);
 
-namespace App\Services;
-
 require_once __DIR__ . '/../../config/gemini.php';
 
 class GeminiService {

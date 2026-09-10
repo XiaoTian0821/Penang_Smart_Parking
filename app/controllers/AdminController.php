@@ -5,7 +5,14 @@
 
 namespace App\Controllers;
 
+use App\Models\UserModel;
+use App\Models\VehicleModel;
+use App\Models\ParkingSessionModel;
+use App\Models\CompoundModel;
 use App\Services\CompoundService;
+use App\Models\AppealModel;
+use App\Models\CameraModel;
+use App\Models\AiDetectionModel;
 
 class AdminController {
     private $userModel;
@@ -24,28 +31,26 @@ class AdminController {
             redirect('/login');
         }
 
-        $this->userModel = new \App\Models\UserModel();
+        $this->userModel = new UserModel();
         $this->zoneModel = new \App\Models\ZoneModel();
-        $this->vehicleModel = new \App\Models\VehicleModel();
-        $this->sessionModel = new \App\Models\ParkingSessionModel();
+        $this->vehicleModel = new VehicleModel();
+        $this->sessionModel = new ParkingSessionModel();
         $this->compoundService = new CompoundService();
-        $this->appealModel = new \App\Models\AppealModel();
-        $this->cameraModel = new \App\Models\CameraModel();
-        $this->aiDetectionModel = new \App\Models\AiDetectionModel();
+        $this->appealModel = new AppealModel();
+        $this->cameraModel = new CameraModel();
+        $this->aiDetectionModel = new AiDetectionModel();
     }
 
     public function index() {
         $totalUsers = $this->userModel->count();
         $totalSessions = $this->sessionModel->count();
-        $totalCompounds = (new \App\Models\CompoundModel())->count();
+        $totalCompounds = (new CompoundModel())->count();
         $pendingCompounds = $this->compoundService->getPendingReview();
         $recentDetections = $this->aiDetectionModel->getRecent(10);
         $zones = $this->zoneModel->getActive();
 
-        // Revenue stats
         $todayRevenue = 0;
         $monthRevenue = 0;
-        // In production, query wallet_transactions table
 
         render('admin/dashboard', [
             'totalUsers' => $totalUsers,
@@ -84,7 +89,7 @@ class AdminController {
     public function sessions() {
         $limit = (int)($_GET['limit'] ?? 100);
         $offset = (int)($_GET['offset'] ?? 0);
-        $sessions = $this->sessionModel->getCustomerSessions(1, 0); // Admin sees all
+        $sessions = $this->sessionModel->getCustomerSessions(1, 0);
         render('admin/sessions', ['sessions' => $sessions]);
     }
 
@@ -121,7 +126,6 @@ class AdminController {
 
     public function settings() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Handle settings update
             $_SESSION['flash_message'] = 'Settings updated';
             $_SESSION['flash_type'] = 'success';
             redirect('/admin/settings');

@@ -5,10 +5,6 @@
  */
 declare(strict_types=1);
 
-use App\Controllers\OfficerController;
-use App\Controllers\CustomerController;
-use App\Controllers\AdminController;
-
 // Define base path FIRST
 if (!defined('BASE_PATH')) {
     define('BASE_PATH', dirname(__DIR__));
@@ -66,15 +62,15 @@ if ($uri !== '' && $uri !== '/') {
 
 // Route: /login, /register, /logout, /map
 if ($uri === '/login' || $uri === '') {
-    (new \App\Controllers\AuthController())->login();
+    (new AuthController())->login();
     exit;
 }
 if ($uri === '/register') {
-    (new \App\Controllers\AuthController())->register();
+    (new AuthController())->register();
     exit;
 }
 if ($uri === '/logout') {
-    (new \App\Controllers\AuthController())->logout();
+    (new AuthController())->logout();
     exit;
 }
 if ($uri === '/map') {
@@ -89,7 +85,7 @@ if (strpos($uri, '/admin') === 0) {
     if ($user['role'] !== 'admin' && $user['role'] !== 'super_admin') {
         redirect('/login');
     }
-    $ctrl = new AdminController();
+    $ctrl = new \App\Controllers\AdminController();
     $routes = [
         '/admin' => 'index', '/admin/' => 'index',
         '/admin/users' => 'users', '/admin/zones' => 'zones',
@@ -115,7 +111,7 @@ if (strpos($uri, '/officer') === 0) {
     if (!in_array($user['role'], ['officer', 'admin', 'super_admin'])) {
         redirect('/login');
     }
-    $ctrl = new OfficerController();
+    $ctrl = new \App\Controllers\OfficerController();
     $routes = [
         '/officer' => 'index', '/officer/' => 'index',
         '/officer/scan' => 'scan', '/officer/compounds' => 'compounds',
@@ -170,4 +166,4 @@ if (strpos($uri, '/api/') === 0) {
 }
 
 // Default: login page
-(new \App\Controllers\AuthController())->login();
+(new AuthController())->login();

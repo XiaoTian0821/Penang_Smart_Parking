@@ -19,41 +19,37 @@ class ParkingSessionModel {
     }
 
     public function findByVehicle(int $vehicleId): ?array {
-        $stmt = $this->pdo->prepare(
-            'SELECT * FROM parking_sessions WHERE vehicle_id = ? AND status = ? ORDER BY created_at DESC LIMIT 1'
-        );
-        $stmt->execute([$vehicleId, 'active']);
+        $stmt = $this->pdo->prepare("
+            SELECT * FROM parking_sessions 
+            WHERE vehicle_id = ? AND status = 'active' 
+            ORDER BY created_at DESC LIMIT 1
+        ");
+        $stmt->execute([$vehicleId]);
         return $stmt->fetch() ?: null;
     }
 
-    public function findByPlate(string $normalizedPlate): ?array {
-        $stmt = $this->pdo->prepare(
-            'SELECT * FROM parking_sessions WHERE normalized_plate = ? AND status = ? ORDER BY created_at DESC LIMIT 1'
-        );
-        $stmt->execute([strtoupper($normalizedPlate), 'active']);
+    public function findByPlate(string $plate): ?array {
+        $stmt = $this->pdo->prepare("
+            SELECT * FROM parking_sessions 
+            WHERE normalized_plate = ? AND status = 'active' 
+            ORDER BY created_at DESC LIMIT 1
+        ");
+        $stmt->execute([$plate]);
         return $stmt->fetch() ?: null;
-    }
-
-    public function findByPlateAll(string $normalizedPlate): array {
-        $stmt = $this->pdo->prepare(
-            'SELECT * FROM parking_sessions WHERE normalized_plate = ? ORDER BY created_at DESC'
-        );
-        $stmt->execute([strtoupper($normalizedPlate)]);
-        return $stmt->fetchAll();
     }
 
     public function create(array $data): int {
-        $normalized = strtoupper(preg_replace('/[\s\-]+/', '', $data['plate']));
-        $stmt = $this->pdo->prepare(
-            'INSERT INTO parking_sessions (session_number, customer_id, vehicle_id, normalized_plate, plate_snapshot, zone_id, gps_lat, gps_lng, start_time, end_time, duration_minutes, fee, rate_snapshot, payment_transaction_id, status)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        );
+        $stmt = $this->pdo->prepare('
+            INSERT INTO parking_sessions 
+            (session_number, customer_id, vehicle_id, normalized_plate, zone_id, gps_lat, gps_lng, 
+             start_time, end_time, duration_minutes, fee, rate_snapshot, payment_transaction_id, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ');
         $stmt->execute([
             $data['session_number'],
             $data['customer_id'],
             $data['vehicle_id'],
-            $normalized,
-            $data['plate_snapshot'] ?? null,
+            $data['normalized_plate'],
             $data['zone_id'],
             $data['gps_lat'] ?? null,
             $data['gps_lng'] ?? null,
@@ -61,48 +57,50 @@ class ParkingSessionModel {
             $data['end_time'],
             $data['duration_minutes'],
             $data['fee'],
-            $data['rate_snapshot'] ?? json_encode([]),
+            $data['rate_snapshot'] ?? null,
             $data['payment_transaction_id'] ?? null,
-            'active'
+            $data['status'] ?? 'active',
         ]);
         return (int)$this->pdo->lastInsertId();
     }
 
-    public function updateStatus(int $id, string $status): bool {
+    public function updateStatus(int $sessionId, string $status): bool {
         $stmt = $this->pdo->prepare('UPDATE parking_sessions SET status = ? WHERE id = ?');
-        return $stmt->execute([$status, $id]);
-    }
-
-    public function extend(int $id, string $newEndTime, int $additionalMinutes, float $additionalFee): bool {
-        $stmt = $this->pdo->prepare(
-            'UPDATE parking_sessions SET end_time = ?, duration_minutes = duration_minutes + ?, fee = fee + ? WHERE id = ? AND status = ?'
-        );
-        return $stmt->execute([$newEndTime, $additionalMinutes, $additionalFee, $id, 'active']);
-    }
-
-    public function getActiveByZone(int $zoneId): array {
-        $stmt = $this->pdo->prepare('SELECT * FROM parking_sessions WHERE zone_id = ? AND status = ?');
-        $stmt->execute([$zoneId, 'active']);
-        return $stmt->fetchAll();
-    }
-
-    public function getCustomerSessions(int $customerId, int $limit = 50): array {
-        $stmt = $this->pdo->prepare(
-            'SELECT * FROM parking_sessions WHERE customer_id = ? ORDER BY created_at DESC LIMIT ?'
-        );
-        $stmt->execute([$customerId, $limit]);
-        return $stmt->fetchAll();
-    }
-
-    public function getExpired(): array {
-        $stmt = $this->pdo->query(
-            "SELECT * FROM parking_sessions WHERE status = 'active' AND end_time < NOW()"
-        );
-        return $stmt->fetchAll();
+        return $stmt->execute([$status, $sessionId]);
     }
 
     public function count(): int {
         $stmt = $this->pdo->query('SELECT COUNT(*) FROM parking_sessions');
         return (int)$stmt->fetchColumn();
+    }
+
+    public function extend(int $sessionId, string $newEndTime, int $additionalMinutes, float $fee): bool {
+        $stmt = $this->pdo->prepare('
+            UPDATE parking_sessions 
+            SET end_time = ?, duration_minutes = duration_minutes + ?, fee = fee + ? 
+            WHERE id = ?
+        ');
+        return $stmt->execute([$newEndTime, $additionalMinutes, $fee, $sessionId]);
+    }
+
+    public function getCustomerSessions(int $customerId, int $limit = 50): array {
+        $stmt = $this->pdo->prepare('
+            SELECT * FROM parking_sessions 
+            WHERE customer_id = ? 
+            ORDER BY created_at DESC 
+            LIMIT ?
+        ');
+        $stmt->execute([$customerId, $limit]);
+        return $stmt->fetchAll();
+    }
+
+    public function getActiveByZone(int $zoneId): array {
+        $stmt = $this->pdo->prepare('
+            SELECT * FROM parking_sessions 
+            WHERE zone_id = ? AND status = ?
+            ORDER BY start_time DESC
+        ');
+        $stmt->execute([$zoneId, 'active']);
+        return $stmt->fetchAll();
     }
 }

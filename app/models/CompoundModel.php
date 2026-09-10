@@ -18,31 +18,38 @@ class CompoundModel {
         return $stmt->fetch() ?: null;
     }
 
-    public function findByPlate(string $normalizedPlate): array {
+    public function findByCompoundNumber(string $compoundNumber): ?array {
+        $stmt = $this->pdo->prepare('SELECT * FROM compounds WHERE compound_number = ?');
+        $stmt->execute([$compoundNumber]);
+        return $stmt->fetch() ?: null;
+    }
+
+    public function findByPlate(string $plate): array {
         $stmt = $this->pdo->prepare('SELECT * FROM compounds WHERE normalized_plate = ? ORDER BY created_at DESC');
-        $stmt->execute([strtoupper($normalizedPlate)]);
+        $stmt->execute([$plate]);
         return $stmt->fetchAll();
     }
 
     public function create(array $data): int {
-        $stmt = $this->pdo->prepare(
-            'INSERT INTO compounds (compound_number, violation_type, normalized_plate, plate_snapshot, vehicle_id, customer_id, zone_id, detection_time, evidence_path, amount, status, issued_by, due_date)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        );
+        $stmt = $this->pdo->prepare('
+            INSERT INTO compounds 
+            (compound_number, violation_type, normalized_plate, vehicle_id, customer_id, zone_id, 
+             detection_time, evidence_path, amount, status, issued_by, due_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ');
         $stmt->execute([
             $data['compound_number'],
             $data['violation_type'],
-            strtoupper($data['normalized_plate']),
-            $data['plate_snapshot'] ?? null,
+            $data['normalized_plate'],
             $data['vehicle_id'] ?? null,
             $data['customer_id'] ?? null,
-            $data['zone_id'],
+            $data['zone_id'] ?? null,
             $data['detection_time'],
             $data['evidence_path'] ?? null,
             $data['amount'],
             $data['status'] ?? 'pending_review',
             $data['issued_by'] ?? null,
-            $data['due_date']
+            $data['due_date'],
         ]);
         return (int)$this->pdo->lastInsertId();
     }
@@ -51,11 +58,13 @@ class CompoundModel {
         $fields = [];
         $values = [];
         foreach ($data as $key => $value) {
-            $fields[] = "$key = ?";
-            $values[] = $value;
+            if ($key !== 'id') {
+                $fields[] = "$key = ?";
+                $values[] = $value;
+            }
         }
         $values[] = $id;
-        $stmt = $this->pdo->prepare("UPDATE compounds SET " . implode(', ', $fields) . " WHERE id = ?");
+        $stmt = $this->pdo->prepare('UPDATE compounds SET ' . implode(', ', $fields) . ' WHERE id = ?');
         return $stmt->execute($values);
     }
 
@@ -66,13 +75,8 @@ class CompoundModel {
     }
 
     public function getPendingReview(): array {
-        $stmt = $this->pdo->query("SELECT * FROM compounds WHERE status = 'pending_review' ORDER BY created_at DESC");
-        return $stmt->fetchAll();
-    }
-
-    public function getByStatus(string $status, int $limit = 50): array {
-        $stmt = $this->pdo->prepare('SELECT * FROM compounds WHERE status = ? ORDER BY created_at DESC LIMIT ?');
-        $stmt->execute([$status, $limit]);
+        $stmt = $this->pdo->prepare('SELECT * FROM compounds WHERE status = ? ORDER BY created_at DESC');
+        $stmt->execute(['pending_review']);
         return $stmt->fetchAll();
     }
 

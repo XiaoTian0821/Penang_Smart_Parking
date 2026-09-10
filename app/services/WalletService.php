@@ -1,17 +1,13 @@
 <?php
 /**
  * Wallet Service
- * Handles wallet operations securely
  */
-declare(strict_types=1);
-
-namespace App\Services;
 
 class WalletService {
     private $walletModel;
 
     public function __construct() {
-        $this->walletModel = new \App\Models\WalletModel();
+        $this->walletModel = new WalletModel();
     }
 
     public function getBalance(int $customerId): float {
@@ -27,7 +23,7 @@ class WalletService {
     }
 
     public function credit(int $customerId, float $amount, string $referenceId, string $type = 'RELOAD'): bool {
-        return $this->walletModel->addCredit($customerId, $amount, $referenceId, $type);
+        return $this->walletModel->credit($customerId, $amount, $referenceId, $type);
     }
 
     public function debit(int $customerId, float $amount, string $referenceId, string $type = 'PARKING_PAYMENT'): bool {

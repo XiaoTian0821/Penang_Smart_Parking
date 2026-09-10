@@ -5,8 +5,6 @@
  */
 declare(strict_types=1);
 
-namespace App\Services;
-
 class CameraService {
     private const MAX_FILE_SIZE = 10485760; // 10MB
     private const ALLOWED_MIME_TYPES = [

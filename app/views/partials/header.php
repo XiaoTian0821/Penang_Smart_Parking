@@ -8,7 +8,8 @@
     <title><?php echo APP_NAME; ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
-    <link href="<?php echo APP_URL; ?>/assets/css/main.css" rel="stylesheet">
+    <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
+    <link href="<?php echo APP_URL; ?>/assets/css/main.css?v=<?php echo filemtime(BASE_PATH . '/assets/css/main.css'); ?>" rel="stylesheet">
 </head>
 <body>
     <?php if (isLoggedIn()): ?>

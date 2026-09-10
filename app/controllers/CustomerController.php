@@ -3,12 +3,6 @@
  * Customer Dashboard Controller
  */
 
-namespace App\Controllers;
-
-use App\Services\ParkingService;
-use App\Services\WalletService;
-use App\Services\NotificationService;
-
 class CustomerController {
     private $parkingService;
     private $walletService;
@@ -24,11 +18,11 @@ class CustomerController {
             redirect('/login');
         }
 
-        $this->parkingService = new ParkingService();
+        $this->parkingService = new \App\Services\ParkingService();
         $this->walletService = new WalletService();
-        $this->vehicleModel = new \App\Models\VehicleModel();
-        $this->sessionModel = new \App\Models\ParkingSessionModel();
-        $this->compoundModel = new \App\Models\CompoundModel();
+        $this->vehicleModel = new VehicleModel();
+        $this->sessionModel = new ParkingSessionModel();
+        $this->compoundModel = new CompoundModel();
         $this->notificationService = new NotificationService();
     }
 
@@ -39,10 +33,8 @@ class CustomerController {
         $wallet = $this->walletService->getWallet($user['id']);
         $unreadNotifications = $this->notificationService->getUnread($user['id']);
 
-        // Get recent sessions
         $recentSessions = $this->sessionModel->getCustomerSessions($user['id'], 5);
 
-        // Get pending compounds
         $pendingCompounds = [];
         foreach ($vehicles as $vehicle) {
             $compounds = $this->compoundModel->findByPlate($vehicle['normalized_plate']);
@@ -123,7 +115,7 @@ class CustomerController {
 
     public function profile() {
         $user = currentUser();
-        $userModel = new \App\Models\UserModel();
+        $userModel = new UserModel();
         $userData = $userModel->findById($user['id']);
         render('customer/profile', ['user' => $userData]);
     }

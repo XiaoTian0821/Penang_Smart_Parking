@@ -1,11 +1,13 @@
 <?php
 /**
  * Compound Service
- * Handles violation compounds
  */
-declare(strict_types=1);
 
 namespace App\Services;
+
+use App\Models\CompoundModel;
+use App\Models\WalletModel;
+use App\Models\NotificationModel;
 
 class CompoundService {
     private $compoundModel;
@@ -14,17 +16,13 @@ class CompoundService {
     private $pdo;
 
     public function __construct() {
-        $this->compoundModel = new \App\Models\CompoundModel();
-        $this->walletModel = new \App\Models\WalletModel();
-        $this->notificationModel = new \App\Models\NotificationModel();
+        $this->compoundModel = new CompoundModel();
+        $this->walletModel = new WalletModel();
+        $this->notificationModel = new NotificationModel();
         $this->pdo = db();
     }
 
-    /**
-     * Create a compound from enforcement result
-     */
     public function createCompound(array $data): int {
-        // Generate compound number
         $compoundNumber = 'CMP-' . date('Ymd') . '-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
 
         $data['compound_number'] = $compoundNumber;
@@ -35,9 +33,6 @@ class CompoundService {
         return $this->compoundModel->create($data);
     }
 
-    /**
-     * Review and issue a pending compound
-     */
     public function reviewCompound(int $compoundId, int $officerId, string $decision, string $remarks = ''): array {
         $compound = $this->compoundModel->findById($compoundId);
         if (!$compound) {
@@ -59,13 +54,12 @@ class CompoundService {
                     'review_remarks' => $remarks,
                 ]);
 
-                // Notify customer
                 if ($compound['customer_id']) {
                     $this->notificationModel->create(
                         $compound['customer_id'],
                         'compound_issued',
                         'Parking Violation Issued',
-                        "A parking violation ({$compound['violation_type']}) has been issued for plate {$compound['normalized_plate']}. Amount: RM {$compound['amount']}. Due date: " . date('M d, Y', strtotime($compound['due_date'])) . "."
+                        "A parking violation ({$compound['violation_type']}) has been issued for plate {$compound['normalized_plate']}. Amount: RM {$compound['amount']}."
                     );
                 }
             } elseif ($decision === 'rejected') {
@@ -87,9 +81,6 @@ class CompoundService {
         }
     }
 
-    /**
-     * Process compound payment
-     */
     public function payCompound(int $compoundId, int $customerId): bool {
         $compound = $this->compoundModel->findById($compoundId);
         if (!$compound || $compound['status'] !== 'issued') {
@@ -100,7 +91,6 @@ class CompoundService {
             return false;
         }
 
-        // Debit wallet
         $success = $this->walletModel->debit(
             $customerId,
             (float)$compound['amount'],

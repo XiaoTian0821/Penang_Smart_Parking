@@ -1,17 +1,13 @@
 <?php
 /**
  * Notification Service
- * Handles system notifications
  */
-declare(strict_types=1);
-
-namespace App\Services;
 
 class NotificationService {
     private $notificationModel;
 
     public function __construct() {
-        $this->notificationModel = new \App\Models\NotificationModel();
+        $this->notificationModel = new NotificationModel();
     }
 
     public function create(int $userId, string $type, string $title, string $message, ?int $relatedId = null): int {

@@ -3,9 +3,16 @@
  * Parking Service
  * Handles parking session lifecycle
  */
-declare(strict_types=1);
 
 namespace App\Services;
+
+use \DateTime;
+use \DateTimeZone;
+use App\Models\VehicleModel;
+use App\Models\ParkingSessionModel;
+use App\Models\ZoneModel;
+use App\Models\WalletModel;
+use App\Models\NotificationModel;
 
 class ParkingService {
     private $sessionModel;
@@ -15,16 +22,13 @@ class ParkingService {
     private $pdo;
 
     public function __construct() {
-        $this->sessionModel = new \App\Models\ParkingSessionModel();
-        $this->zoneModel = new \App\Models\ZoneModel();
-        $this->walletModel = new \App\Models\WalletModel();
-        $this->notificationModel = new \App\Models\NotificationModel();
+        $this->sessionModel = new ParkingSessionModel();
+        $this->zoneModel = new ZoneModel();
+        $this->walletModel = new WalletModel();
+        $this->notificationModel = new NotificationModel();
         $this->pdo = db();
     }
 
-    /**
-     * Start a new parking session
-     */
     public function startSession(int $customerId, int $vehicleId, int $zoneId, ?float $gpsLat = null, ?float $gpsLng = null, ?string $plateSnapshot = null): array {
         $zone = $this->zoneModel->findById($zoneId);
         if (!$zone) {
@@ -35,33 +39,27 @@ class ParkingService {
             return ['success' => false, 'error' => 'Zone is not active'];
         }
 
-        // Check for existing active session
         $existing = $this->sessionModel->findByVehicle($vehicleId);
         if ($existing) {
             return ['success' => false, 'error' => 'Vehicle already has an active parking session'];
         }
 
-        // Get vehicle details
-        $vehicleModel = new \App\Models\VehicleModel();
+        $vehicleModel = new VehicleModel();
         $vehicle = $vehicleModel->findById($vehicleId);
         if (!$vehicle || $vehicle['owner_id'] !== $customerId) {
             return ['success' => false, 'error' => 'Vehicle not found or unauthorized'];
         }
 
-        // Calculate session times
-        $now = new \DateTime('now', new \DateTimeZone(APP_TIMEZONE));
+        $now = new DateTime('now', new DateTimeZone(APP_TIMEZONE));
         $durationMinutes = (int)($zone['max_duration'] ?? 120);
         $endTime = clone $now;
         $endTime->modify("+{$durationMinutes} minutes");
 
-        // Calculate fee
         $hourlyRate = (float)($zone['hourly_rate'] ?? 1.00);
         $fee = round(($durationMinutes / 60) * $hourlyRate, 2);
 
-        // Generate session number
         $sessionNumber = 'PS-' . date('Ymd') . '-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
 
-        // Check wallet balance
         $wallet = $this->walletModel->getOrCreate($customerId);
         if ((float)$wallet['balance'] < $fee) {
             return [
@@ -70,11 +68,9 @@ class ParkingService {
             ];
         }
 
-        // Begin transaction
         $this->pdo->beginTransaction();
 
         try {
-            // Debit wallet
             $debitSuccess = $this->walletModel->debit(
                 $customerId,
                 $fee,
@@ -87,7 +83,6 @@ class ParkingService {
                 return ['success' => false, 'error' => 'Wallet debit failed'];
             }
 
-            // Create parking session
             $sessionId = $this->sessionModel->create([
                 'session_number' => $sessionNumber,
                 'customer_id' => $customerId,
@@ -107,7 +102,6 @@ class ParkingService {
 
             $this->pdo->commit();
 
-            // Notify customer
             $this->notificationModel->create(
                 $customerId,
                 'parking_started',
@@ -115,7 +109,6 @@ class ParkingService {
                 "Your parking session {$sessionNumber} has started in Zone {$zone['name']}. Ends at {$endTime->format('H:i')}."
             );
 
-            // Update zone available spaces
             $this->zoneModel->updateAvailableSpaces($zoneId, max(0, (int)$zone['available_spaces'] - 1));
 
             logEvent('parking', "Session started: {$sessionNumber} | Vehicle: {$vehicle['plate']} | Zone: {$zoneId} | Fee: RM {$fee}");
@@ -134,9 +127,6 @@ class ParkingService {
         }
     }
 
-    /**
-     * Extend a parking session
-     */
     public function extendSession(int $sessionId, int $customerId, int $additionalMinutes = 60): array {
         $session = $this->sessionModel->findById($sessionId);
         if (!$session || $session['customer_id'] !== $customerId || $session['status'] !== 'active') {
@@ -151,19 +141,16 @@ class ParkingService {
         $hourlyRate = (float)json_decode($session['rate_snapshot'] ?? '{}', true)['hourly_rate'] ?? 1.00;
         $fee = round(($additionalMinutes / 60) * $hourlyRate, 2);
 
-        // Check wallet
         $wallet = $this->walletModel->getOrCreate($customerId);
         if ((float)$wallet['balance'] < $fee) {
             return ['success' => false, 'error' => "Insufficient wallet balance. Required: RM {$fee}"];
         }
 
-        // Debit wallet
         $debitSuccess = $this->walletModel->debit($customerId, $fee, "EXT-{$sessionId}-" . time(), 'PARKING_EXTENSION');
         if (!$debitSuccess) {
             return ['success' => false, 'error' => 'Wallet debit failed'];
         }
 
-        // Extend session
         $newEndTime = date('Y-m-d H:i:s', strtotime($session['end_time'] . " +{$additionalMinutes} minutes"));
         $success = $this->sessionModel->extend($sessionId, $newEndTime, $additionalMinutes, $fee);
 
@@ -179,26 +166,26 @@ class ParkingService {
         return ['success' => $success, 'new_end_time' => $newEndTime, 'fee' => $fee];
     }
 
-    /**
-     * End a parking session
-     */
     public function endSession(int $sessionId, int $customerId): array {
         $session = $this->sessionModel->findById($sessionId);
         if (!$session || $session['customer_id'] !== $customerId || $session['status'] !== 'active') {
             return ['success' => false, 'error' => 'Session not found or not active'];
         }
 
-        // Calculate actual duration and fee
-        $startTime = new \DateTime($session['start_time'], new \DateTimeZone(APP_TIMEZONE));
-        $now = new \DateTime('now', new \DateTimeZone(APP_TIMEZONE));
+        $startTime = new DateTime($session['start_time'], new DateTimeZone(APP_TIMEZONE));
+        $now = new DateTime('now', new DateTimeZone(APP_TIMEZONE));
         $actualMinutes = floor($startTime->diff($now)->i + ($startTime->diff($now)->h * 60));
-        $actualFee = $session['fee']; // Fee already prepaid
+        $actualFee = $session['fee'];
+        $zone = $this->zoneModel->findById((int)$session['zone_id']);
+        if (!$zone) {
+            return ['success' => false, 'error' => 'Parking zone not found'];
+        }
 
         $success = $this->sessionModel->updateStatus($sessionId, 'completed');
 
         if ($success) {
-            // Update zone available spaces
-            $this->zoneModel->updateAvailableSpaces($session['zone_id'], (int)$session['available_spaces'] + 1);
+            $availableSpaces = min((int)$zone['capacity'], (int)$zone['available_spaces'] + 1);
+            $this->zoneModel->updateAvailableSpaces((int)$session['zone_id'], $availableSpaces);
 
             $this->notificationModel->create(
                 $customerId,
@@ -213,16 +200,6 @@ class ParkingService {
         return ['success' => $success, 'actual_duration_minutes' => $actualMinutes, 'actual_fee' => $actualFee];
     }
 
-    /**
-     * Get active sessions for a zone
-     */
-    public function getActiveSessionsByZone(int $zoneId): array {
-        return $this->sessionModel->getActiveByZone($zoneId);
-    }
-
-    /**
-     * Check if a vehicle has valid parking
-     */
     public function checkVehicleParking(string $normalizedPlate, ?int $zoneId = null): array {
         $session = $this->sessionModel->findByPlate($normalizedPlate);
 
@@ -230,11 +207,10 @@ class ParkingService {
             return ['has_session' => false, 'session' => null, 'status' => 'no_session'];
         }
 
-        $now = new \DateTime('now', new \DateTimeZone(APP_TIMEZONE));
-        $endTime = new \DateTime($session['end_time'], new \DateTimeZone(APP_TIMEZONE));
+        $now = new DateTime('now', new DateTimeZone(APP_TIMEZONE));
+        $endTime = new DateTime($session['end_time'], new DateTimeZone(APP_TIMEZONE));
 
         if ($endTime < $now) {
-            // Session expired - update status
             $this->sessionModel->updateStatus($session['id'], 'expired');
             return ['has_session' => false, 'session' => $session, 'status' => 'expired'];
         }

@@ -13,23 +13,23 @@ class AiDetectionModel {
     }
 
     public function create(array $data): int {
-        $stmt = $this->pdo->prepare(
-            'INSERT INTO ai_detections (plate, confidence, model_used, processing_time, image_path, status, enforcement_result)
-             VALUES (?, ?, ?, ?, ?, ?, ?)'
-        );
+        $stmt = $this->pdo->prepare('
+            INSERT INTO ai_detections (plate, confidence, model_used, processing_time, image_path, status, enforcement_result)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ');
         $stmt->execute([
-            $data['plate'],
-            $data['confidence'],
-            $data['model_used'],
-            $data['processing_time'],
+            $data['plate'] ?? null,
+            $data['confidence'] ?? null,
+            $data['model_used'] ?? null,
+            $data['processing_time'] ?? null,
             $data['image_path'] ?? null,
             $data['status'] ?? 'processed',
-            $data['enforcement_result'] ?? null
+            $data['enforcement_result'] ?? null,
         ]);
         return (int)$this->pdo->lastInsertId();
     }
 
-    public function getRecent(int $limit = 50): array {
+    public function getRecent(int $limit = 20): array {
         $stmt = $this->pdo->prepare('SELECT * FROM ai_detections ORDER BY created_at DESC LIMIT ?');
         $stmt->execute([$limit]);
         return $stmt->fetchAll();

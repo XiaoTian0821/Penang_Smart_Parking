@@ -25,10 +25,10 @@ class UserModel {
     }
 
     public function create(array $data): int {
-        $stmt = $this->pdo->prepare(
-            'INSERT INTO users (email, password, full_name, phone, ic_number, role, status, permissions)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-        );
+        $stmt = $this->pdo->prepare('
+            INSERT INTO users (email, password, full_name, phone, ic_number, role, status, permissions)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ');
         $stmt->execute([
             $data['email'],
             $data['password'],
@@ -37,7 +37,7 @@ class UserModel {
             $data['ic_number'] ?? null,
             $data['role'] ?? 'customer',
             $data['status'] ?? 'active',
-            $data['permissions'] ?? '[]'
+            $data['permissions'] ?? '[]',
         ]);
         return (int)$this->pdo->lastInsertId();
     }
@@ -46,26 +46,23 @@ class UserModel {
         $fields = [];
         $values = [];
         foreach ($data as $key => $value) {
-            if ($key === 'password') {
-                $fields[] = "password = ?";
-                $values[] = password_hash($value, PASSWORD_BCRYPT, ['cost' => 12]);
-            } else {
+            if ($key !== 'id') {
                 $fields[] = "$key = ?";
                 $values[] = $value;
             }
         }
         $values[] = $id;
-        $stmt = $this->pdo->prepare("UPDATE users SET " . implode(', ', $fields) . " WHERE id = ?");
+        $stmt = $this->pdo->prepare('UPDATE users SET ' . implode(', ', $fields) . ' WHERE id = ?');
         return $stmt->execute($values);
     }
 
-    public function updateStatus(int $id, string $status): bool {
-        $stmt = $this->pdo->prepare('UPDATE users SET status = ? WHERE id = ?');
-        return $stmt->execute([$status, $id]);
+    public function delete(int $id): bool {
+        $stmt = $this->pdo->prepare('DELETE FROM users WHERE id = ?');
+        return $stmt->execute([$id]);
     }
 
     public function getAll(int $limit = 100, int $offset = 0): array {
-        $stmt = $this->pdo->prepare('SELECT id, email, full_name, phone, ic_number, role, status, created_at FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?');
+        $stmt = $this->pdo->prepare('SELECT * FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?');
         $stmt->execute([$limit, $offset]);
         return $stmt->fetchAll();
     }

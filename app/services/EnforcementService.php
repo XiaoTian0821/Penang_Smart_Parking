@@ -7,7 +7,14 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Services\GeminiService;
+use App\Models\AiDetectionModel;
+use App\Models\NotificationModel;
+use App\Models\VehicleModel;
+use App\Models\ZoneModel;
+use \CameraService;
+use \GeminiService;
+use App\Services\CompoundService;
+use App\Services\ParkingService;
 
 class EnforcementService {
     private $geminiService;
@@ -25,10 +32,10 @@ class EnforcementService {
         $this->cameraService = new CameraService();
         $this->parkingService = new ParkingService();
         $this->compoundService = new CompoundService();
-        $this->zoneModel = new \App\Models\ZoneModel();
-        $this->vehicleModel = new \App\Models\VehicleModel();
-        $this->notificationModel = new \App\Models\NotificationModel();
-        $this->aiDetectionModel = new \App\Models\AiDetectionModel();
+        $this->zoneModel = new ZoneModel();
+        $this->vehicleModel = new VehicleModel();
+        $this->notificationModel = new NotificationModel();
+        $this->aiDetectionModel = new AiDetectionModel();
     }
 
     /**

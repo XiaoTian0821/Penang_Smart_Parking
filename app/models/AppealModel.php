@@ -24,29 +24,12 @@ class AppealModel {
         return $stmt->fetch() ?: null;
     }
 
-    public function getCustomerAppeals(int $customerId): array {
-        $stmt = $this->pdo->prepare(
-            'SELECT a.*, c.compound_number, c.violation_type, c.amount as compound_amount
-             FROM appeals a
-             JOIN compounds c ON a.compound_id = c.id
-             WHERE a.customer_id = ?
-             ORDER BY a.created_at DESC'
-        );
-        $stmt->execute([$customerId]);
-        return $stmt->fetchAll();
-    }
-
     public function create(array $data): int {
-        $stmt = $this->pdo->prepare(
-            'INSERT INTO appeals (compound_id, customer_id, reason, status)
-             VALUES (?, ?, ?, ?)'
-        );
-        $stmt->execute([
-            $data['compound_id'],
-            $data['customer_id'],
-            $data['reason'],
-            'pending'
-        ]);
+        $stmt = $this->pdo->prepare('
+            INSERT INTO appeals (compound_id, customer_id, reason)
+            VALUES (?, ?, ?)
+        ');
+        $stmt->execute([$data['compound_id'], $data['customer_id'], $data['reason']]);
         return (int)$this->pdo->lastInsertId();
     }
 
@@ -54,11 +37,13 @@ class AppealModel {
         $fields = [];
         $values = [];
         foreach ($data as $key => $value) {
-            $fields[] = "$key = ?";
-            $values[] = $value;
+            if ($key !== 'id') {
+                $fields[] = "$key = ?";
+                $values[] = $value;
+            }
         }
         $values[] = $id;
-        $stmt = $this->pdo->prepare("UPDATE appeals SET " . implode(', ', $fields) . " WHERE id = ?");
+        $stmt = $this->pdo->prepare('UPDATE appeals SET ' . implode(', ', $fields) . ' WHERE id = ?');
         return $stmt->execute($values);
     }
 
