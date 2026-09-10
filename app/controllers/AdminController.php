@@ -2,6 +2,11 @@
 /**
  * Admin Controller
  */
+
+namespace App\Controllers;
+
+use App\Services\CompoundService;
+
 class AdminController {
     private $userModel;
     private $zoneModel;
