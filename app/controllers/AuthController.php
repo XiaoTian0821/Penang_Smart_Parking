@@ -3,6 +3,10 @@
  * Auth Controller
  */
 
+namespace App\Controllers;
+
+use App\Models\UserModel;
+
 class AuthController {
     private $userModel;
 

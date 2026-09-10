@@ -62,15 +62,15 @@ if ($uri !== '' && $uri !== '/') {
 
 // Route: /login, /register, /logout, /map
 if ($uri === '/login' || $uri === '') {
-    (new AuthController())->login();
+    (new \App\Controllers\AuthController())->login();
     exit;
 }
 if ($uri === '/register') {
-    (new AuthController())->register();
+    (new \App\Controllers\AuthController())->register();
     exit;
 }
 if ($uri === '/logout') {
-    (new AuthController())->logout();
+    (new \App\Controllers\AuthController())->logout();
     exit;
 }
 if ($uri === '/map') {

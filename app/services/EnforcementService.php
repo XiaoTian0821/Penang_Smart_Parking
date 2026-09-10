@@ -67,14 +67,17 @@ class EnforcementService {
         ]);
 
         // 4. If plate not detected or low confidence, return for manual review
-        if (!$aiResult['success'] || !$aiResult['plate_detected'] || !$aiResult['above_threshold']) {
+        $plateDetected = $aiResult['plate_detected'] ?? false;
+        $aboveThreshold = $aiResult['above_threshold'] ?? false;
+
+        if (!$aiResult['success'] || !$plateDetected || !$aboveThreshold) {
             return [
                 'success' => true,
                 'detection_id' => $detectionId,
                 'plate' => null,
                 'confidence' => $aiResult['confidence'] ?? 0.0,
                 'status' => 'review',
-                'message' => $aiResult['plate_detected']
+                'message' => $plateDetected
                     ? 'Confidence below threshold. Requires manual review.'
                     : 'No plate detected. Requires manual review.',
                 'needs_review' => true,
