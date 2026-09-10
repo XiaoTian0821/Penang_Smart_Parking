@@ -40,7 +40,7 @@
                                 <td><?php echo e($vehicle['year'] ?? '-'); ?></td>
                                 <td><?php echo e(date('M d, Y', strtotime($vehicle['created_at']))); ?></td>
                                 <td>
-                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteVehicle(<?php echo $vehicle['id']; ?>)">
+                                    <button class="btn btn-sm btn-outline-danger" data-delete-vehicle="<?php echo (int)$vehicle['id']; ?>">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </td>
@@ -106,7 +106,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="submitVehicle()">Save Vehicle</button>
+                <button type="button" class="btn btn-primary" id="submitVehicleButton">Save Vehicle</button>
             </div>
         </div>
     </div>

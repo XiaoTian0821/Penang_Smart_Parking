@@ -25,7 +25,7 @@ class VehicleModel {
     }
 
     public function findByOwner(int $ownerId): array {
-        $stmt = $this->pdo->prepare('SELECT * FROM vehicles WHERE owner_id = ? ORDER BY created_at DESC');
+        $stmt = $this->pdo->prepare("SELECT * FROM vehicles WHERE owner_id = ? AND status = 'active' ORDER BY created_at DESC");
         $stmt->execute([$ownerId]);
         return $stmt->fetchAll();
     }
@@ -73,7 +73,7 @@ class VehicleModel {
     }
 
     public function delete(int $id, int $ownerId): bool {
-        $stmt = $this->pdo->prepare('DELETE FROM vehicles WHERE id = ? AND owner_id = ?');
+        $stmt = $this->pdo->prepare("UPDATE vehicles SET status = 'inactive' WHERE id = ? AND owner_id = ?");
         return $stmt->execute([$id, $ownerId]);
     }
 
