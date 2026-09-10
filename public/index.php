@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 use App\Controllers\OfficerController;
 use App\Controllers\CustomerController;
+use App\Controllers\AdminController;
 
 // Define base path FIRST
 if (!defined('BASE_PATH')) {

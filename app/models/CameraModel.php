@@ -3,7 +3,7 @@
  * Camera Model
  */
 
-namespace App\Services;
+namespace App\Models;
 
 use App\Services\CameraService;
 
