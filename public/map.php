@@ -13,7 +13,7 @@ require_once __DIR__ . '/../config/app.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/bootstrap.php';
 
-$zoneModel = new ZoneModel();
+$zoneModel = new \App\Models\ZoneModel();
 $zones = $zoneModel->getActive();
 
 // Minimal map page without full navbar
