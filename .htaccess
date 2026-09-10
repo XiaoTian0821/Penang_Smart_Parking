@@ -1,0 +1,15 @@
+RewriteEngine On
+RewriteBase /Penang_Smart_Parking/
+
+# Keep real files and directories, such as assets, API scripts, and storage files.
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Send application routes to the public front controller.
+RewriteRule ^ public/index.php [QSA,L]
+
+# Protect project configuration and source files from direct web access.
+<FilesMatch "^(\.env|.*\.(ini|log|sql|sql.gz|sh))$">
+    Require all denied
+</FilesMatch>
